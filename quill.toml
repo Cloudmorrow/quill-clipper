@@ -1,16 +1,16 @@
-# CutMorrow: a video editor. The videos, photos and sounds in the drive are
+# Clipper: a video editor. The videos, photos and sounds in the drive are
 # its material; a project lays pieces of them on video and audio tracks,
 # cut, trimmed and moved, each as big as the picture or smaller over what is
 # under it, with blurs that follow keyframes and a crop, and exports a new
-# file to My Files › CutMorrow Exports. The editor is Cloudmorrow's
+# file to My Files › Clipper Exports. The editor is Cloudmorrow's
 # timeline kit, drawn on every surface; the pictures and the export come from
 # a service beside the server, with ffmpeg, which the install brings. See
 # CLAUDE.md for the format and the loop.
 
 [quill]
-id = "cutmorrow"
-name = "CutMorrow"
-version = "3.2.1"
+id = "clipper"
+name = "Clipper"
+version = "4.0.0"
 summary = "A video editor for the videos and photos in your drive: drag clips and photos onto video and audio tracks, cut, trim and arrange them, put one small over another, blur what should not be seen, crop, and export."
 category = "creative"
 icon = "play"
@@ -26,7 +26,7 @@ features = [
   "Blur a face, a number plate or a screen with keyframes: the box moves and resizes in a straight line between them, and moves with its piece",
   "Crop the whole picture",
   "A new project is the size you choose (1080p, 720p, 4K, vertical, square or your own), or its first clip's",
-  "Export to MP4, WebM, MOV, GIF or sound-only M4A, as the project or at 1080p, 720p or 480p, into My Files › CutMorrow Exports",
+  "Export to MP4, WebM, MOV, GIF or sound-only M4A, as the project or at 1080p, 720p or 480p, into My Files › Clipper Exports",
   "The same editor on the web and the phone (live, with sound), in the terminal (real frames) and on the command line",
 ]
 
@@ -38,16 +38,16 @@ datamodels = ["file"]
 # The projects, and each one in the editor: Cloudmorrow's timeline kit
 # (docs/TIMELINE.md in the core). The material is every video, photo and
 # sound in My Files, and in any other drive chosen in the editor. Looking
-# through the videos and photos is Media's: CutMorrow requires it, and adds
+# through the videos and photos is Media's: Clipper requires it, and adds
 # Edit this video to a video or a photo there.
 [[screens]]
 id = "editor"
 kit = "timeline"
-label = "CutMorrow"
-model = "cutmorrow.project"
+label = "Clipper"
+model = "clipper.project"
 title = "name"
-pieces = "cutmorrow.piece"
-effects = "cutmorrow.effect"
+pieces = "clipper.piece"
+effects = "clipper.effect"
 media = { share = "my-files", within = "" }   # the whole drive, every folder
 frames = "frames"
 export = "export"
@@ -64,14 +64,14 @@ description = "Starts a project from this video, photo or sound: all of it, on t
 [actions.fields]
 name = { kind = "string", description = "What to call the project; the file's name when left out" }
 
-# The export: rendered beside the server, and put in My Files › CutMorrow
+# The export: rendered beside the server, and put in My Files › Clipper
 # Exports. The project says how it goes.
 [[actions]]
 id = "export"
 label = "Export"
-on = "cutmorrow.project"
+on = "clipper.project"
 tone = "primary"
-description = "Renders the project to a new file in My Files › CutMorrow Exports."
+description = "Renders the project to a new file in My Files › Clipper Exports."
 [actions.fields]
 format = { kind = "enum", values = ["mp4", "webm", "mov", "gif", "m4a"], labels = ["MP4 (H.264, AAC)", "WebM (VP9, Opus)", "MOV (H.264)", "GIF (no sound)", "M4A (sound only)"], default = "mp4", required = true }
 size = { kind = "enum", values = ["project", "1080p", "720p", "480p"], labels = ["As the project", "1080p", "720p", "480p"], default = "project", required = true }
@@ -87,13 +87,13 @@ assistant = false
 # A program beside the server, with ffmpeg: it answers the frames API the
 # editor draws its viewer from, fills in the lengths and sizes the kit
 # leaves blank, and renders the exports people ask for. It works through the
-# record API, as the administrator who installed CutMorrow.
+# record API, as the administrator who installed Clipper.
 [[services]]
 id = "render"
 command = ["python", "services/render.py"]
 always = true
 
-# The frames API: /api/q/cutmorrow/frames/info, /source and /frame.
+# The frames API: /api/q/clipper/frames/info, /source and /frame.
 [[apis]]
 id = "frames"
 service = "render"
@@ -104,6 +104,6 @@ prefix = "frames"
 # renderer's PATH. Nobody installs anything on the server by hand.
 [requires]
 runtimes = ["ffmpeg"]
-# Media shows the videos (and the photos) in the drive; CutMorrow edits them.
-# Installing CutMorrow installs Media first; Media needs nothing of CutMorrow.
+# Media shows the videos (and the photos) in the drive; Clipper edits them.
+# Installing Clipper installs Media first; Media needs nothing of Clipper.
 quills = ["media"]

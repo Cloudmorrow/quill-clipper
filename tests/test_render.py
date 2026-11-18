@@ -184,9 +184,9 @@ def test_the_export_is_one_file_in_the_exports_folder_cut_cropped_and_blurred(ti
     done = renderer.render(store.record(PROJECT, project["id"]))["fields"]
     assert done["status"] == "done", done["message"]
     out = store.record(FILE, done["output"])
-    assert out["fields"]["folder"] == "CutMorrow Exports" and out["fields"]["name"] == "Holiday cut.mp4"
+    assert out["fields"]["folder"] == "Clipper Exports" and out["fields"]["name"] == "Holiday cut.mp4"
     # The folder is made the first time, at the top of My Files, and only once.
-    folders = [f for f in store.records(FILE, kind="folder") if f["fields"]["name"] == "CutMorrow Exports"]
+    folders = [f for f in store.records(FILE, kind="folder") if f["fields"]["name"] == "Clipper Exports"]
     assert len(folders) == 1 and folders[0]["fields"]["folder"] == ""
     path = store.path_of(out)
     info = probe(path)

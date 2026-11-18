@@ -1,4 +1,4 @@
-"""CutMorrow: the code behind the buttons.
+"""Clipper: the code behind the buttons.
 
 The editor itself is Cloudmorrow's timeline kit, declared in quill.toml:
 projects, the pieces on their tracks and the blurs on the pieces, with the
@@ -11,8 +11,8 @@ lengths and sizes, and renders the exports.
 
 from cloudmorrow.quill import action, error, go, redraw, toast
 
-PROJECT, PIECE, MEDIA, FILE = "cutmorrow.project", "cutmorrow.piece", "cutmorrow.media", "file"
-EXPORTS = "CutMorrow Exports"
+PROJECT, PIECE, MEDIA, FILE = "clipper.project", "clipper.piece", "clipper.media", "file"
+EXPORTS = "Clipper Exports"
 TRACKS = [
     {"id": "V2", "kind": "video", "name": "Video 2"},
     {"id": "V1", "kind": "video", "name": "Video 1"},
