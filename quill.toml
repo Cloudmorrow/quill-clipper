@@ -10,9 +10,9 @@
 [quill]
 id = "cutmorrow"
 name = "CutMorrow"
-version = "3.2.0"
+version = "3.2.1"
 summary = "A video editor for the videos and photos in your drive: drag clips and photos onto video and audio tracks, cut, trim and arrange them, put one small over another, blur what should not be seen, crop, and export."
-category = "personal"
+category = "creative"
 icon = "play"
 publisher = "Cloudmorrow"
 license = "AGPL-3.0-or-later"
