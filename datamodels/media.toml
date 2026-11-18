@@ -3,7 +3,7 @@
 # changed file is read again. A photo has a size and no length.
 
 [datamodel]
-id = "cutmorrow.media"
+id = "clipper.media"
 version = 1
 label = "Media"
 description = "What a video, photo or sound in the drive is: its length, picture size, frame rate, and whether it has a picture, sound, or is a still photo."

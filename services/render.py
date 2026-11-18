@@ -1,10 +1,10 @@
-"""CutMorrow's renderer: a program beside the server, with ffmpeg.
+"""Clipper's renderer: a program beside the server, with ffmpeg.
 
 The core starts it with the Quill and keeps it running. It does three things,
-through the record API as the administrator who installed CutMorrow:
+through the record API as the administrator who installed Clipper:
 
 - **the frames API** (`[[apis]] id = "frames"`): an HTTP server on `$PORT`,
-  which the core forwards `/api/q/cutmorrow/frames/…` to. `info` is what
+  which the core forwards `/api/q/clipper/frames/…` to. `info` is what
   ffprobe says about a file, `source` a frame of one, `frame` a frame of a
   project's cut — every piece seen at that moment, a clip or a photo fitted
   into the frame or sitting small in its place over what is under it, its
@@ -14,7 +14,7 @@ through the record API as the administrator who installed CutMorrow:
   offset on); a project with no size or frame rate gets its first video's;
 - **exports**: a project whose status is *queued* is rendered with one
   ffmpeg filter graph (graph.py) and the result is put in My Files ›
-  CutMorrow Exports, made the first time; the project says *done* and
+  Clipper Exports, made the first time; the project says *done* and
   points at it, or *failed* and why.
 
 Only the standard library is used, and ffmpeg and ffprobe on the service's
@@ -44,17 +44,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import graph
 
 PROJECT, PIECE, EFFECT, MEDIA, FILE = (
-    "cutmorrow.project",
-    "cutmorrow.piece",
-    "cutmorrow.effect",
-    "cutmorrow.media",
+    "clipper.project",
+    "clipper.piece",
+    "clipper.effect",
+    "clipper.media",
     "file",
 )
 # Every export lands here, in the drive of whoever the renderer runs as.
-EXPORTS = ("my-files", "CutMorrow Exports")
+EXPORTS = ("my-files", "Clipper Exports")
 EVERY = 3.0
 FRAME_TIMEOUT = 25.0
-NO_FFMPEG = "ffmpeg is missing on the server; install CutMorrow again and it comes with it"
+NO_FFMPEG = "ffmpeg is missing on the server; install Clipper again and it comes with it"
 
 
 def log(*parts) -> None:
@@ -439,7 +439,7 @@ def serve(renderer: Renderer, port: int, host: str = "127.0.0.1") -> ThreadingHT
     """The frames API on *port*, in a thread of its own; the server, to shut down."""
 
     class Frames(BaseHTTPRequestHandler):
-        server_version = "cutmorrow-frames"
+        server_version = "clipper-frames"
 
         def log_message(self, fmt, *args) -> None:  # quiet: the core logs requests
             pass

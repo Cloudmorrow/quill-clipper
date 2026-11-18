@@ -1,4 +1,4 @@
-"""CutMorrow's tests: the real record store, files and gate, and quill.py, on this machine.
+"""Clipper's tests: the real record store, files and gate, and quill.py, on this machine.
 
 `cm quill test` runs them; `cm quill test --sandbox` runs the same tests
 with quill.py in the sandbox, as a server runs it. The renderer (a service)
@@ -11,10 +11,10 @@ import pytest
 from cloudmorrow.quill.testing import Harness
 
 PROJECT, PIECE, EFFECT, MEDIA, FILE = (
-    "cutmorrow.project",
-    "cutmorrow.piece",
-    "cutmorrow.effect",
-    "cutmorrow.media",
+    "clipper.project",
+    "clipper.piece",
+    "clipper.effect",
+    "clipper.media",
     "file",
 )
 
@@ -45,9 +45,9 @@ def test_the_timeline_screen_and_its_datamodels_check_out(q):
     (editor,) = [s for s in manifest["screens"] if s.get("kit") == "timeline"]
     assert editor["pieces"] == PIECE and editor["effects"] == EFFECT and editor["frames"] == "frames"
     assert editor["media"] == {"share": "my-files", "within": ""} and editor["export"] == "export"
-    # The projects come first: CutMorrow opens on them, and `cm cutmorrow` has the timeline's words.
-    # Looking through the videos is Media's, which CutMorrow brings with it.
-    assert [(s["id"], s["label"]) for s in manifest["screens"]] == [("editor", "CutMorrow")]
+    # The projects come first: Clipper opens on them, and `cm clipper` has the timeline's words.
+    # Looking through the videos is Media's, which Clipper brings with it.
+    assert [(s["id"], s["label"]) for s in manifest["screens"]] == [("editor", "Clipper")]
     assert manifest["requires"]["quills"] == ["media"]
     assert manifest["apis"] == [{"id": "frames", "service": "render", "prefix": "frames"}]
     assert manifest["requires"]["runtimes"] == ["ffmpeg"]
