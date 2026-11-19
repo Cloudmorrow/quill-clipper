@@ -6,7 +6,7 @@
 id = "clipper.project"
 version = 1
 label = "Project"
-description = "A video being edited: pieces of the videos and sounds in My Files › Videos on tracks, a crop, and its export."
+description = "A video being edited: pieces of the videos, photos and sounds in the drive on tracks, a crop, the file it was started from, and how it was last saved or exported."
 scopes = ["personal"]
 title = "name"
 
@@ -17,10 +17,13 @@ height = { kind = "int", description = "The picture's height in pixels; the firs
 fps = { kind = "decimal", label = "Frames per second" }
 tracks = { kind = "json", description = "The tracks, top to bottom; blank is Video 2, Video 1, Audio 1, Audio 2" }
 crop = { kind = "json", description = "The part of the picture kept, in percent: {x, y, w, h}; blank keeps all of it" }
+source = { kind = "string", indexed = true, label = "Video", description = "The file the project was started from (Edit this video), which Save writes over; blank for a project made from nothing" }
 status = { kind = "enum", values = ["editing", "queued", "rendering", "done", "failed"], labels = ["Editing", "Queued", "Rendering", "Exported", "Failed"], default = "editing", indexed = true }
 message = { kind = "string", description = "What the renderer last said about it" }
 output = { kind = "string", label = "Export", description = "The last export: a file beside the first piece's video" }
 format = { kind = "enum", values = ["mp4", "webm", "mov", "gif", "m4a"], labels = ["MP4 (H.264, AAC)", "WebM (VP9, Opus)", "MOV (H.264)", "GIF (no sound)", "M4A (sound only)"], default = "mp4", description = "What the export is" }
 size = { kind = "enum", values = ["project", "1080p", "720p", "480p"], labels = ["As the project", "1080p", "720p", "480p"], default = "project", description = "The export's picture: the project's (cropped), or its shorter side made 1080, 720 or 480" }
 export_name = { kind = "string", label = "Export name", description = "What the export is called; the project's name when blank" }
+overwrite = { kind = "bool", default = false, label = "Over the video", description = "What the last save asked: write over the video it came from, or a new file beside it" }
+save_name = { kind = "string", label = "Save as", description = "What the last save was to be called; blank when the last render was an export" }
 exported_at = { kind = "datetime", indexed = true, stamp = { field = "status", value = "done" } }

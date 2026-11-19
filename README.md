@@ -23,9 +23,10 @@ server, with an ffmpeg the install brings. Nothing leaves it.
    A photo stays five seconds, or as long as you trim it. Move pieces along
    the timeline and between tracks, trim either end, split at the playhead,
    mute a piece or set its volume. A higher video track covers a lower one;
-   every piece's sound is mixed. Or start from a video or a photo in
-   **Media** (or Files): **Edit this video** on it makes a project with all
-   of it on the first track.
+   every piece's sound is mixed. Or start from a video in **Media** (or
+   Files): **Edit this video** on it — a video's sheet has it, a sound's has
+   **Edit this sound**, a photo's has Retouch's button — opens it under its
+   own name, all of it on the first track, with nothing to type first.
 3. **Make smaller** on a piece puts its picture in a box over whatever is on
    the tracks under it: drag the box on the viewer to move and resize it, or
    type where it goes, and **Fill the picture** makes it whole again. So a
@@ -35,10 +36,13 @@ server, with an ffmpeg the install brings. Nothing leaves it.
    the box moves and resizes in a straight line. Blurs belong to their piece,
    so moving the piece takes them with it.
 5. **Crop** the whole picture, if you like.
-6. **Export**: MP4 (H.264 and AAC, plays anywhere), WebM (VP9 and Opus), MOV,
-   GIF (no sound) or M4A (the sound alone), as the project or at 1080p, 720p
-   or 480p. The file lands in My Files › **Clipper Exports**, under the
-   name you give it.
+6. **Save**, on a project opened from a video: write over the video itself
+   (the one before goes to the Trash for thirty days, and the project starts
+   afresh on the saved video), or save as a new file beside it, in the kind
+   its name says — .mp4, .mov, .webm, .gif or .m4a. **Export** is for the
+   rest: MP4 (H.264 and AAC, plays anywhere), WebM (VP9 and Opus), MOV, GIF
+   (no sound) or M4A (the sound alone), as the project or at 1080p, 720p or
+   480p, into My Files › **Clipper Exports**, under the name you give it.
 
 ## What it adds to your Cloudmorrow
 
@@ -46,7 +50,7 @@ server, with an ffmpeg the install brings. Nothing leaves it.
 | --- | --- |
 | Datamodels | uses the foundational `file`; introduces `clipper.project` (a timeline: its picture size, frame rate, tracks, crop, export settings and the status of its export), `clipper.piece` (part of a file on a track: where it starts, where in the file it is cut from, how long, its volume, and its place in the picture), `clipper.effect` (a blur on a piece and its keyframes) and `clipper.media` (what the renderer read from a file: its length, size, whether it has sound, and whether it is a photo) |
 | Screens | Clipper (the projects and the editor: the timeline kit) — on the phone, the web app, the terminal, `cm clipper`, and to your assistant |
-| Actions | Edit this video (on a video's or a photo's sheet, in Media or Files), Export (format, size, name), Refresh |
+| Actions | Edit this video (on a video's sheet, in Media or Files) and Edit this sound (on a sound's), Save (over the video, or as a new file by name), Export (format, size, name), Refresh |
 | Quills | requires [Media](https://github.com/Cloudmorrow/quill-media), which shows the videos and photos in your drive and is installed with Clipper |
 | Services, APIs | `render`: a program beside the server (`services/render.py`), kept running, with ffmpeg. It serves the `frames` API the editor's viewer draws from (`/api/q/clipper/frames/info`, `/source`, `/frame`), fills in the lengths and sizes the editor leaves blank, and renders the exports, through the record API |
 

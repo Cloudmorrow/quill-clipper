@@ -65,7 +65,7 @@ def test_edit_this_video_starts_a_project_with_the_whole_video_on_v1(q):
     done = q.act("edit-video", video)
     assert done.ok and done.toast == "Editing holiday"
     (project,) = q.list(PROJECT)
-    assert project["name"] == "holiday" and project["status"] == "editing"
+    assert project["name"] == "holiday" and project["status"] == "editing" and project["source"] == video.id
     assert [t["id"] for t in project["tracks"]] == ["V2", "V1", "A1", "A2"]
     assert any(
         e["effect"] == "go" and e["screen"] == "editor" and e["params"] == {"project": project.id} for e in done.effects
@@ -77,30 +77,63 @@ def test_edit_this_video_starts_a_project_with_the_whole_video_on_v1(q):
 
     # Once the renderer has read the file, the next project starts with its length.
     q.seed(MEDIA, source=video.id, name="holiday.mp4", modified=video["modified"], duration=12.5, video=True)
-    assert q.act("edit-video", video, name="Second cut").ok
-    second = next(p for p in q.list(PROJECT) if p["name"] == "Second cut")
+    assert q.act("edit-video", video).ok
+    second = [p for p in q.list(PROJECT) if p["name"] == "holiday"][-1]
     (again,) = q.list(PIECE, project=second.id)
     assert float(again["length"]) == 12.5
     # A file changed since it was read is not known any more.
     stale = a_file(q, "stale.mp4")
     q.seed(MEDIA, source=stale.id, name="stale.mp4", modified="long ago", duration=3)
-    assert q.act("edit-video", stale, name="Stale").ok
-    third = next(p for p in q.list(PROJECT) if p["name"] == "Stale")
+    assert q.act("edit-video", stale).ok
+    third = next(p for p in q.list(PROJECT) if p["name"] == "stale")
     (piece,) = q.list(PIECE, project=third.id)
     assert piece.get("length") in (None, "")
 
 
 def test_a_sound_goes_on_the_first_audio_track_and_other_files_are_refused(q):
-    assert q.act("edit-video", a_file(q, "song.mp3")).ok
+    """Edit this sound is a sound's button (`only`, by the file's name), Edit this
+    video a video's: the server leaves each off the other and refuses the press."""
+    assert q.act("edit-sound", a_file(q, "song.mp3")).ok
     (piece,) = q.list(PIECE)
     assert piece["track"] == "A1"
-    assert "neither a video, a photo nor a sound" in q.act("edit-video", a_file(q, "notes.txt")).error
+    refused = q.act("edit-video", a_file(q, "notes.txt"))
+    assert refused.refused and refused.message == "Edit this video is not for this file"
+    assert q.act("edit-video", a_file(q, "song2.mp3")).refused
+    assert q.act("edit-sound", a_file(q, "clip.mov")).refused
 
 
-def test_a_photo_goes_on_v1_for_five_seconds(q):
-    assert q.act("edit-video", a_file(q, "sun.jpg")).ok
-    (piece,) = q.list(PIECE)
-    assert piece["track"] == "V1" and float(piece["length"]) == 5.0
+def test_a_photo_is_retouchs_but_the_handler_still_takes_one(q):
+    """A photo's sheet has no Clipper button (photos go on the tracks from the
+    tiles); the handler itself still lays one on V1 for five seconds, for a
+    photo-named file handed to it by other code."""
+    assert q.act("edit-video", a_file(q, "sun.jpg")).refused
+    assert q.list(PIECE) == []
+
+
+def test_save_goes_over_the_video_or_beside_it_and_an_export_clears_it(q):
+    video = a_file(q)
+    assert q.act("edit-video", video).ok
+    (project,) = q.list(PROJECT)
+    assert "Give the new file a name" in q.act("save", project, overwrite=False, name="").error
+    assert "slashes" in q.act("save", project, overwrite=False, name="Other/cut.mp4").error
+    done = q.act("save", project, overwrite=True, name="holiday.mp4")
+    assert done.ok and done.toast == "Saving over the video; the one before goes to the Trash"
+    after = q.get(PROJECT, project.id)
+    assert (after["status"], after["overwrite"], after["save_name"]) == ("queued", True, "holiday.mp4")
+    assert "being rendered already" in q.act("save", project, overwrite=True).error
+    q.change(PROJECT, project.id, status="done")
+    done = q.act("save", project, overwrite=False, name="holiday cut.webm")
+    assert done.ok and done.toast == "Saving as holiday cut.webm, beside the video"
+    assert q.get(PROJECT, project.id)["save_name"] == "holiday cut.webm"
+    # An export after a save is an export: the save's asks are cleared.
+    q.change(PROJECT, project.id, status="done")
+    assert q.act("export", project, format="mp4").ok
+    after = q.get(PROJECT, project.id)
+    assert (after["overwrite"], after["save_name"]) == (False, "")
+    # A project made from nothing has nothing to write over.
+    blank = q.seed(PROJECT, name="Blank")
+    q.seed(PIECE, project=blank.id, track="V1", source=video.id, name="holiday.mp4", start=0, length=4)
+    assert "nothing to write over" in q.act("save", blank, overwrite=True).error
 
 
 def test_export_needs_pieces_and_queues_once_with_its_settings(q):
@@ -117,7 +150,7 @@ def test_export_needs_pieces_and_queues_once_with_its_settings(q):
         "Holiday",
     )
     assert after["message"] == "Waiting to be exported as WebM"
-    assert "being exported already" in q.act("export", project).error
+    assert "being rendered already" in q.act("export", project).error
     q.change(PROJECT, project.id, status="done")
     assert q.act("export", project, format="gif", name="Short one").ok
     assert q.get(PROJECT, project.id)["export_name"] == "Short one"

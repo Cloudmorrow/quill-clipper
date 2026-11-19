@@ -10,7 +10,7 @@
 [quill]
 id = "clipper"
 name = "Clipper"
-version = "4.0.0"
+version = "4.1.0"
 summary = "A video editor for the videos and photos in your drive: drag clips and photos onto video and audio tracks, cut, trim and arrange them, put one small over another, blur what should not be seen, crop, and export."
 category = "creative"
 icon = "play"
@@ -19,7 +19,8 @@ license = "AGPL-3.0-or-later"
 code = "quill.py"
 features = [
   "Every video, photo and sound in your drive is material, as tiles beside the picture: drag one onto a track where it should go, or tap it to put it at the playhead; another drive or share is chosen above them",
-  "Edit this video, on a video or a photo in Media or Files, starts a project from it",
+  "Edit this video, on a video in Media or Files (and Edit this sound on a sound), opens it under its own name, all of it on the first track; a photo is Retouch's",
+  "Save, on a video opened so: over the video itself (the one before goes to the Trash) or as a new file beside it; the project then starts afresh on the saved video",
   "A real timeline: video and audio tracks, pieces cut, trimmed, split, moved and rearranged; a higher video track covers a lower one; a photo stays as long as you make it",
   "Make a clip or a photo smaller and put it anywhere in the picture, over what is under it: a box dragged on the viewer, or numbers typed",
   "Sound from every piece, mixed: mute one, or set its volume",
@@ -51,21 +52,47 @@ effects = "clipper.effect"
 media = { share = "my-files", within = "" }   # the whole drive, every folder
 frames = "frames"
 export = "export"
+save = "save"
 
 # -- actions -------------------------------------------------------------------------
-# A video (a photo, a sound) becomes a project with it on the first track:
-# a button on every file's sheet, so on one opened in Media or Files.
+# A video becomes a project with it on the first track: a button on a
+# video's sheet — only a video's, by its name — so on one opened in Media or
+# Files; a sound has its own. Nothing is asked: the project opens under the
+# file's own name, and the file is not touched until it is saved over. A
+# photo's button is Retouch's; photos still go on the tracks from the tiles.
 [[actions]]
 id = "edit-video"
 label = "Edit this video"
 on = "file"
+only = { kind = "file", name = ["*.mp4", "*.mov", "*.m4v", "*.mkv", "*.webm", "*.avi", "*.mts", "*.m2ts", "*.3gp", "*.mpg", "*.mpeg", "*.ogv"] }
 tone = "primary"
-description = "Starts a project from this video, photo or sound: all of it, on the first track of its kind."
+description = "Opens this video in Clipper, under its own name, all of it on the first video track; the video itself is not changed until you save over it."
+
+[[actions]]
+id = "edit-sound"
+label = "Edit this sound"
+on = "file"
+only = { kind = "file", name = ["*.mp3", "*.m4a", "*.aac", "*.wav", "*.flac", "*.ogg", "*.oga", "*.opus", "*.wma", "*.aif", "*.aiff"] }
+handler = "edit_video"
+tone = "primary"
+description = "Opens this sound in Clipper, under its own name, all of it on the first audio track."
+
+# Save: rendered beside the server, and written over the video the project
+# was started from (the one before goes to the Trash) or put beside it as
+# a new file, in the kind its name says. The editor asks which and presses
+# this with both answered; the project says how it goes.
+[[actions]]
+id = "save"
+label = "Save"
+on = "clipper.project"
+tone = "primary"
+description = "Saves the project over the video it was started from, or as a new file beside it, by its name's suffix: .mp4, .mov, .webm, .gif or .m4a."
 [actions.fields]
-name = { kind = "string", description = "What to call the project; the file's name when left out" }
+overwrite = { kind = "bool", default = false, label = "Over the video", description = "Write over the video itself; the one before goes to the Trash" }
+name = { kind = "string", description = "What to call the new file, suffix and all; the video's name when writing over it" }
 
 # The export: rendered beside the server, and put in My Files › Clipper
-# Exports. The project says how it goes.
+# Exports, in any format and size. The project says how it goes.
 [[actions]]
 id = "export"
 label = "Export"

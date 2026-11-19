@@ -52,6 +52,8 @@ PROJECT, PIECE, EFFECT, MEDIA, FILE = (
 )
 # Every export lands here, in the drive of whoever the renderer runs as.
 EXPORTS = ("my-files", "Clipper Exports")
+# What a save can be written as, by the name's suffix; anything else is an MP4 beside the video.
+SAVE_SUFFIXES = {".mp4": "mp4", ".m4v": "mp4", ".mov": "mov", ".webm": "webm", ".gif": "gif", ".m4a": "m4a"}
 EVERY = 3.0
 FRAME_TIMEOUT = 25.0
 NO_FFMPEG = "ffmpeg is missing on the server; install Clipper again and it comes with it"
@@ -109,6 +111,9 @@ class Store:
         return self.api(
             "PATCH", f"/api/records/{model}/{urllib.parse.quote(record_id, safe='')}", body={"fields": fields}
         )
+
+    def delete(self, model: str, record_id: str) -> None:
+        self.api("DELETE", f"/api/records/{model}/{urllib.parse.quote(record_id, safe='')}")
 
     def upload(self, share: str, folder: str, name: str, source: Path) -> dict:
         with source.open("rb") as handle:
@@ -363,41 +368,117 @@ class Renderer:
             self.render(project)
 
     def render(self, project: dict) -> dict:
-        """Render one project's export; the project as it is after, done or failed."""
+        """Render one project: an export into Clipper Exports, or a save — over
+        the video it came from, or beside it. The project as it is after, done
+        or failed."""
         fields = project["fields"]
         if not self.ready:
             return self.store.patch(PROJECT, project["id"], {"status": "failed", "message": NO_FFMPEG})
         self.store.patch(PROJECT, project["id"], {"status": "rendering", "message": "Rendering"})
+        saving = bool(fields.get("overwrite")) or bool(str(fields.get("save_name") or "").strip())
+        what = "save" if saving else "export"
         fmt = fields.get("format") or "mp4"
         size = fields.get("size") or "project"
         started = time.time()
+        overwrite = False
+        source = None
         try:
             pieces = self.pieces(project)
             if not pieces:
                 raise ValueError("there is nothing on the tracks")
-            share, folder = EXPORTS
-            ensure_folder(self.store, share, folder)
-            name = unique_name(
-                self.store, share, folder, export_stem(fields.get("export_name") or fields.get("name")), fmt
-            )
+            if saving:
+                if not fields.get("source"):
+                    raise ValueError("this project was not started from a video")
+                source = self.file(str(fields["source"]))
+                share = str(source["fields"].get("share") or "my-files")
+                folder = str(source["fields"].get("folder") or "")
+                source_name = str(source["fields"].get("name") or "video.mp4")
+                overwrite = bool(fields.get("overwrite"))
+                wanted = source_name if overwrite else str(fields.get("save_name") or "").strip()
+                stem, suffix = split_name(wanted, source_name)
+                fmt = SAVE_SUFFIXES.get(suffix.lower())
+                if fmt is None:
+                    # A kind nothing here writes (MKV, AVI…): an MP4 beside the video, under the same name.
+                    fmt, overwrite = "mp4", False
+                size = "project"
+                name = source_name if overwrite else unique_name(self.store, share, folder, stem, fmt)
+            else:
+                share, folder = EXPORTS
+                ensure_folder(self.store, share, folder)
+                name = unique_name(
+                    self.store, share, folder, export_stem(fields.get("export_name") or fields.get("name")), fmt
+                )
             self.home.mkdir(parents=True, exist_ok=True)
             with tempfile.TemporaryDirectory(dir=self.home) as tmp:
                 out = Path(tmp) / ("out" + graph.FORMATS[fmt]["suffix"])
                 command = graph.export_command(self.ffmpeg, self.settings(project, pieces), pieces, fmt, size, str(out))
-                log("rendering", fields.get("name"), "as", fmt, size, "from", len(pieces), "pieces")
+                log("rendering", fields.get("name"), "as", fmt, size, "from", len(pieces), "pieces", "for a", what)
                 result = run(command)
                 if result.returncode != 0 or not out.exists():
                     raise ValueError(f"ffmpeg: {failed_said(result)}")
-                made = self.store.upload(share, folder, name, out)
+                if overwrite:
+                    made = self.write_over(source, share, folder, out)
+                else:
+                    made = self.store.upload(share, folder, name, out)
         except (ValueError, Refused, ApiError, OSError) as exc:
-            log("render", fields.get("name"), "failed:", exc)
+            log(what, fields.get("name"), "failed:", exc)
             return self.store.patch(
-                PROJECT, project["id"], {"status": "failed", "message": f"The export failed: {exc}"[:400]}
+                PROJECT, project["id"], {"status": "failed", "message": f"The {what} failed: {exc}"[:400]}
             )
+        made_name = str(made["fields"].get("name") or name)
         where = "/".join(x for x in ("My Files" if share == "my-files" else share, folder) if x)
-        said = f"Exported {name} to {where} in {time.time() - started:.0f} s"
+        if overwrite:
+            # The video is the project now: it starts afresh, with all of the saved video on the first track.
+            said = f"Saved over {made_name} in {time.time() - started:.0f} s; the one before is in the Trash"
+            log(said)
+            self.start_over(project, made)
+            return self.store.patch(
+                PROJECT,
+                project["id"],
+                {"status": "done", "message": said, "output": made["id"], "source": made["id"], "crop": None},
+            )
+        said = f"{'Saved' if saving else 'Exported'} {made_name} to {where} in {time.time() - started:.0f} s"
         log(said)
         return self.store.patch(PROJECT, project["id"], {"status": "done", "message": said, "output": made["id"]})
+
+    def write_over(self, video: dict, share: str, folder: str, out: Path) -> dict:
+        """The saved video in the video's place: put beside it under a working
+        name, the video moved to the Trash, the new one given its name — and so
+        its id, which a file's path makes."""
+        video_name = str(video["fields"].get("name") or "video.mp4")
+        stem, suffix = split_name(video_name, video_name)
+        working = unique_name(self.store, share, folder, f"{stem} (saving)", SAVE_SUFFIXES.get(suffix.lower(), "mp4"))
+        made = self.store.upload(share, folder, working, out)
+        self.store.delete(FILE, video["id"])
+        return self.store.patch(FILE, made["id"], {"name": video_name})
+
+    def start_over(self, project: dict, video: dict) -> None:
+        """The project's tracks cleared, and the saved video laid whole on the first of them."""
+        for piece in self.store.records(PIECE, project=project["id"]):
+            with contextlib.suppress(ApiError):
+                self.store.delete(PIECE, piece["id"])
+        try:
+            info = self.info(video)
+            length = round(graph.number(info.get("duration")), 3)
+        except (Refused, ApiError, OSError):
+            length = None
+        tracks = graph.tracks_of(project["fields"]) if hasattr(graph, "tracks_of") else None
+        kind = "video" if (not tracks or any(t.get("kind") == "video" for t in tracks)) else "audio"
+        first = next((t["id"] for t in (tracks or []) if t.get("kind") == kind), "V1" if kind == "video" else "A1")
+        piece = {
+            "project": project["id"],
+            "track": first,
+            "source": video["id"],
+            "name": str(video["fields"].get("name") or ""),
+            "start": 0,
+            "offset": 0,
+            "volume": 1,
+            "muted": False,
+        }
+        if length:
+            piece["length"] = length
+        with contextlib.suppress(ApiError):
+            self.store.create(PIECE, piece)
 
 
 def ensure_folder(store, share: str, folder: str) -> None:
@@ -412,6 +493,17 @@ def ensure_folder(store, share: str, folder: str) -> None:
     except ApiError as exc:
         # Made meanwhile is as good; anything else, the upload says.
         log("the exports folder:", exc)
+
+
+def split_name(name: str, like: str) -> tuple[str, str]:
+    """`(stem, suffix)` of a file name; a name with no suffix takes *like*'s."""
+    clean = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', " ", str(name or "")).strip(" .")
+    path = Path(clean)
+    suffix = path.suffix if path.suffix and len(path.suffix) <= 6 else ""
+    stem = path.stem if suffix else clean
+    if not suffix:
+        suffix = Path(like).suffix or ".mp4"
+    return stem or "Video", suffix
 
 
 def export_stem(name) -> str:
