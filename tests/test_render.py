@@ -55,6 +55,10 @@ class FakeStore:
         self.record(model, record_id)["fields"].update(fields)
         return self.data[model][record_id]
 
+    def delete(self, model: str, record_id: str) -> None:
+        self.record(model, record_id)
+        del self.data[model][record_id]
+
     def file(self, path: Path, folder: str = "Videos") -> dict:
         fields = {"share": "my-files", "folder": folder, "name": path.name, "kind": "file", "size": path.stat().st_size,
                   "modified": str(path.stat().st_mtime_ns), "local": str(path)}  # fmt: skip
@@ -270,3 +274,38 @@ def test_the_frames_api_answers_info_source_and_frame(timeline):
         assert missing.value.code == 400
     finally:
         server.shutdown()
+
+
+def test_a_save_goes_over_the_video_and_the_project_starts_afresh(tmp_path):
+    """Written over: the saved cut takes the video's name, the video as it was is
+    deleted (the Trash, on a server), and the project's tracks hold the saved
+    video alone, all of it; beside it: a new file by the name, the project kept."""
+    tmp = tmp_path / "media"
+    tmp.mkdir()
+    a = make(tmp / "a.mp4", "testsrc2=size=320x180:rate=25:duration=3", "sine=frequency=440:duration=3")
+    store = FakeStore(tmp)
+    video = store.file(a)
+    project = store.add(PROJECT, {"name": "a", "status": "queued", "tracks": render.graph.TRACKS,
+                                  "source": video["id"], "overwrite": True, "save_name": "a.mp4"})  # fmt: skip
+    store.add(PIECE, {"project": project["id"], "track": "V1", "source": video["id"], "name": "a.mp4",
+                      "start": 0, "offset": 1, "length": 1.5})  # fmt: skip
+    renderer = render.Renderer(store, tmp / "work")
+    renderer.render(project)
+    f = store.record(PROJECT, project["id"])["fields"]
+    assert f["status"] == "done", f["message"]
+    assert "Saved over a.mp4" in f["message"] and "Trash" in f["message"]
+    files = [r for r in store.records(FILE) if r["fields"]["folder"] == "Videos"]
+    assert [r["fields"]["name"] for r in files] == ["a.mp4"] and files[0]["id"] != video["id"]
+    assert f["source"] == f["output"] == files[0]["id"]
+    saved = store.path_of(files[0])
+    assert abs(float(probe(saved)["format"]["duration"]) - 1.5) < 0.2
+    (piece,) = store.records(PIECE, project=project["id"])
+    assert piece["fields"]["source"] == files[0]["id"] and piece["fields"]["offset"] == 0
+    assert abs(piece["fields"]["length"] - 1.5) < 0.2
+    # Beside it, as a WebM: the video stays, the new file is named as asked.
+    store.patch(PROJECT, project["id"], {"status": "queued", "overwrite": False, "save_name": "a short.webm"})
+    renderer.render(store.record(PROJECT, project["id"]))
+    f = store.record(PROJECT, project["id"])["fields"]
+    assert f["status"] == "done" and "Saved a short.webm to My Files/Videos" in f["message"]
+    names = sorted(r["fields"]["name"] for r in store.records(FILE) if r["fields"]["folder"] == "Videos")
+    assert names == ["a short.webm", "a.mp4"]
